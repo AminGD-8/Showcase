@@ -382,12 +382,22 @@
       <h2>در حال ساخت چیزی جدید هستم</h2>
       <p>اگر دنبال همکاری یا گفت‌وگو درباره یک پروژه‌اید، خوشحال می‌شوم بشنوم.</p>
       <a href="mailto:unique.amin.orifi@gmail.com">تماس با من</a>
+      
+      <button onclick="copyEmail()">
+        your@email.com
+      </button>
     </div>
   </div>
 
   <footer>
     <span class="gold">Psycho Sage</span> — استودیوی توسعه بازی مستقل
   </footer>
+
+<script>
+function copyEmail() {
+    navigator.clipboard.writeText("unique.amin.orifi@gmail.com");
+}
+</script>
 
 </body>
 </html>
