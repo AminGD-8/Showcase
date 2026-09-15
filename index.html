@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Psycho Sage — نمونه‌کارها</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0a10;
+    --card: #17131d;
+    --card-line: rgba(201,162,75,0.14);
+    --ink: #ece6e0;
+    --ink-muted: #9b93a6;
+    --ink-faint: #6b6478;
+    --gold: #c9a24b;
+    --gold-bright: #e3bd6b;
+    --wolf: #6e2a3a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 1000px 520px at 18% -8%, rgba(110,42,58,0.30), transparent 60%),
+      radial-gradient(ellipse 800px 500px at 100% 0%, rgba(201,162,75,0.09), transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Vazirmatn', sans-serif;
+    line-height: 1.75;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Nav ---------- */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 24px 0;
+    font-size: 14px;
+  }
+  nav .brand { color: var(--gold); font-weight: 600; letter-spacing: 0.01em; }
+  nav .role { color: var(--ink-faint); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    max-width: 780px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 88px 24px 64px;
+  }
+  .hero .kicker {
+    font-size: 14px;
+    color: var(--wolf);
+    background: rgba(110,42,58,0.18);
+    border: 1px solid rgba(201,162,75,0.2);
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 26px;
+    color: var(--gold-bright);
+    animation: rise 0.6s ease both;
+  }
+  .hero h1 {
+    font-size: clamp(34px, 6vw, 56px);
+    font-weight: 800;
+    line-height: 1.35;
+    margin: 0 0 20px;
+    color: var(--ink);
+    animation: rise 0.7s ease 0.08s both;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold) 65%, #8a6c2e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero p {
+    color: var(--ink-muted);
+    font-size: 16.5px;
+    max-width: 520px;
+    margin: 0 auto;
+    animation: rise 0.7s ease 0.16s both;
+  }
+
+  /* ---------- Section label ---------- */
+  .section-head {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 8px 24px 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-top: 1px solid var(--card-line);
+    padding-top: 40px;
+  }
+  .section-head h2 { font-size: 22px; font-weight: 600; margin: 0; }
+  .section-head span { color: var(--ink-faint); font-size: 13.5px; }
+
+  /* ---------- Grid ---------- */
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 24px 90px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 36px;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .card:hover {
+    border-color: rgba(201,162,75,0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 28px 56px -30px rgba(110,42,58,0.55);
+  }
+
+  .card.featured { grid-column: span 2; }
+  .card.featured .video-box { aspect-ratio: 21 / 9; }
+
+  .video-box {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  video, iframe { width: 100%; height: 100%; display: block; border: none; }
+
+  .card .meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+  }
+  .card h3 { margin: 0; font-size: 18px; font-weight: 600; color: var(--ink); }
+  .card .tags { display: flex; gap: 8px; flex-shrink: 0; }
+  .tag {
+    font-size: 11.5px;
+    color: var(--gold-bright);
+    background: rgba(201,162,75,0.1);
+    border: 1px solid rgba(201,162,75,0.22);
+    padding: 3px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .card p.desc {
+    margin: 0;
+    padding: 0 6px;
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+
+  /* ---------- Phone frames ---------- */
+  .phone-row {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 90px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 48px;
+  }
+  .phone {
+    width: 250px;
+    text-align: center;
+  }
+  .phone-frame {
+    position: relative;
+    background: #0f0d14;
+    border: 2px solid rgba(201,162,75,0.28);
+    border-radius: 34px;
+    padding: 16px 10px 22px;
+    box-shadow: 0 30px 60px -30px rgba(110,42,58,0.55);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .phone-frame:hover {
+    transform: translateY(-4px);
+    border-color: rgba(201,162,75,0.5);
+  }
+  .phone-frame::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 46px;
+    height: 5px;
+    border-radius: 100px;
+    background: rgba(201,162,75,0.35);
+  }
+  .phone-frame::after {
+    content: "";
+    position: absolute;
+    bottom: 7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 4px;
+    border-radius: 100px;
+    background: rgba(201,162,75,0.25);
+  }
+  .phone-screen {
+    aspect-ratio: 9 / 16;
+    border-radius: 22px;
+    overflow: hidden;
+    background: #000;
+  }
+  .phone-screen video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .phone h4 {
+    margin: 16px 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .phone span {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- CTA / footer ---------- */
+  .cta {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+    text-align: center;
+  }
+  .cta-box {
+    border: 1px solid var(--card-line);
+    border-radius: 14px;
+    padding: 56px 32px;
+    background: linear-gradient(180deg, rgba(201,162,75,0.05), transparent);
+  }
+  .cta-box h2 { margin: 0 0 12px; font-size: 24px; font-weight: 700; }
+  .cta-box p { margin: 0 0 26px; color: var(--ink-muted); font-size: 15px; }
+  .cta-box a {
+    display: inline-block;
+    color: #0c0a10;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    font-weight: 600;
+    font-size: 14.5px;
+    padding: 12px 28px;
+    border-radius: 100px;
+    text-decoration: none;
+  }
+
+  footer {
+    text-align: center;
+    padding: 28px 24px 56px;
+    color: var(--ink-faint);
+    font-size: 13px;
+    border-top: 1px solid var(--card-line);
+  }
+  footer .gold { color: var(--gold); }
+
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .card.featured { grid-column: span 1; }
+    .card.featured .video-box { aspect-ratio: 16 / 9; }
+    nav { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .hero { padding: 64px 20px 48px; }
+  }
+</style>
+</head>
+<body>
+
+  <nav>
+    <span class="brand">Psycho Sage</span>
+    <span class="role">توسعه‌دهنده بازی مستقل — یونیتی</span>
+  </nav>
+
+  <section class="hero">
+    <span class="kicker">نمونه‌کار ۲۰۲۶</span>
+    <h1>ساختن بازی‌هایی با <em>هویت مشخص</em>، از ایده تا اجرا</h1>
+    <p>گزیده‌ای از پروژه‌های در حال ساخت، شامل توسعه بازی موبایل، طراحی مکانیک و محتوای ویدیویی.</p>
+  </section>
+
+  <div class="section-head">
+    <h2>پیش‌نمایش موبایل</h2>
+    <span>روی گوشی اندروید</span>
+  </div>
+
+  <div class="phone-row">
+
+    <div class="phone">
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <video controls preload="none" src="videos/mobile1.mp4"></video>
+        </div>
+      </div>
+      <h4>گیم‌پلی — دور اول</h4>
+      <span>اجرا روی Android</span>
+    </div>
+
+    <div class="phone">
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <video controls preload="none" src="videos/mobile2.mp4"></video>
+        </div>
+      </div>
+      <h4>منوی گاراژ</h4>
+      <span>اجرا روی Android</span>
+    </div>
+
+    <!-- برای اضافه‌کردن قاب بیشتر، همین بلاک <div class="phone">...</div> رو کپی کن -->
+
+  </div>
+
+  <div class="section-head">
+    <h2>پروژه‌ها</h2>
+    <span>۳ مورد</span>
+  </div>
+
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="card featured">
+        <div class="video-box">
+          <video controls preload="none" src="videos/video1.mp4"></video>
+        </div>
+        <div class="meta-row">
+          <h3>The Rooftop Driver — رونمایی گاراژ</h3>
+          <div class="tags">
+            <span class="tag">یونیتی</span>
+            <span class="tag">موبایل</span>
+          </div>
+        </div>
+        <p class="desc">نمایش سیستم گاراژ و انتخاب خودرو در بازی رانندگی معکوس، با ۲۹ نوع خودرو در ۵ رده.</p>
+      </div>
+
+      <div class="card">
+        <div class="video-box">
+          <video controls preload="none" src="videos/video2.mp4"></video>
+        </div>
+        <div class="meta-row">
+          <h3>The Rooftop Driver — رونمایی محیط</h3>
+          <div class="tags"><span class="tag">گیم‌پلی</span></div>
+        </div>
+        <p class="desc">اولین نگاه به محیط بازی و فیزیک رانندگی روی سقف خودرو.</p>
+      </div>
+
+      <div class="card">
+        <div class="video-box">
+          <video controls preload="none" src="videos/video3.mp4"></video>
+        </div>
+        <div class="meta-row">
+          <h3>My Buddy Died — کلیپ منتخب</h3>
+          <div class="tags"><span class="tag">ماینکرفت</span></div>
+        </div>
+        <p class="desc">لحظه‌ای منتخب از سریِ گیم‌پلی مودشده‌ی ماینکرفت.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="cta">
+    <div class="cta-box">
+      <h2>در حال ساخت چیزی جدید هستم</h2>
+      <p>اگر دنبال همکاری یا گفت‌وگو درباره یک پروژه‌اید، خوشحال می‌شوم بشنوم.</p>
+      <a href="mailto:you@example.com">تماس با من</a>
+    </div>
+  </div>
+
+  <footer>
+    <span class="gold">Psycho Sage</span> — استودیوی توسعه بازی مستقل
+  </footer>
+
+</body>
+</html>
