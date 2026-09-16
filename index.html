@@ -55,11 +55,33 @@
 
   /* ---------- Hero ---------- */
   .hero {
+    position: relative;
     max-width: 780px;
     margin: 0 auto;
     text-align: center;
     padding: 88px 24px 64px;
+    overflow: hidden;
+    border-radius: 18px;
+    isolation: isolate;
   }
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 480px 300px at 50% 45%, rgba(12,10,16,0.3), transparent 75%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .hero-content { position: relative; z-index: 2; }
   .hero .kicker {
     font-size: 14px;
     color: var(--wolf);
@@ -77,7 +99,8 @@
     font-weight: 800;
     line-height: 1.35;
     margin: 0 0 20px;
-    color: var(--ink);
+    color: #f2ede6;
+    mix-blend-mode: difference;
     animation: rise 0.7s ease 0.08s both;
   }
   .hero h1 em {
@@ -92,6 +115,7 @@
     font-size: 16.5px;
     max-width: 520px;
     margin: 0 auto;
+    mix-blend-mode: difference;
     animation: rise 0.7s ease 0.16s both;
   }
 
@@ -175,11 +199,60 @@
     color: var(--ink-muted);
   }
 
+  /* ---------- Link chips (reusable anywhere: under videos, footer, etc.) ---------- */
+  .link-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 6px;
+  }
+  .link-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-line);
+    padding: 9px 18px;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .link-chip .arrow {
+    font-size: 11px;
+    opacity: 0.5;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .link-chip:hover {
+    border-color: rgba(201,162,75,0.5);
+    background: rgba(201,162,75,0.08);
+    transform: translateY(-2px);
+  }
+  .link-chip:hover .arrow { opacity: 0.9; transform: translate(2px, -2px); }
+
+  /* primary = main download call-to-action, filled gold */
+  .link-chip.primary {
+    color: #0c0a10;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    border-color: transparent;
+  }
+  .link-chip.primary:hover { filter: brightness(1.08); transform: translateY(-2px); }
+  .link-chip.primary .arrow { opacity: 0.7; }
+
+  /* social = secondary links, tinted with the wolf accent for contrast */
+  .link-chip.social:hover {
+    border-color: rgba(110,42,58,0.55);
+    background: rgba(110,42,58,0.14);
+  }
+
   /* ---------- Phone frames ---------- */
   .phone-row {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 0 24px 90px;
+    padding: 32px 24px 90px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -257,16 +330,55 @@
   }
   .cta-box h2 { margin: 0 0 12px; font-size: 24px; font-weight: 700; }
   .cta-box p { margin: 0 0 26px; color: var(--ink-muted); font-size: 15px; }
-  .cta-box a {
-    display: inline-block;
+  .email-row {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(201,162,75,0.06);
+    border: 1px solid var(--card-line);
+    border-radius: 100px;
+    padding: 7px 7px 7px 22px;
+  }
+  .email-text {
+    font-size: 14.5px;
+    color: var(--ink);
+    direction: ltr;
+    unicode-bidi: embed;
+  }
+  .copy-btn {
+    font-family: inherit;
     color: #0c0a10;
     background: linear-gradient(180deg, var(--gold-bright), var(--gold));
     font-weight: 600;
-    font-size: 14.5px;
-    padding: 12px 28px;
+    font-size: 13.5px;
+    padding: 10px 22px;
+    border: none;
     border-radius: 100px;
-    text-decoration: none;
+    cursor: pointer;
+    transition: filter 0.2s ease;
   }
+  .copy-btn:hover { filter: brightness(1.08); }
+  .copy-btn:active { filter: brightness(0.94); }
+
+  .copy-toast {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    background: #1c1730;
+    border: 1px solid rgba(201,162,75,0.3);
+    color: var(--gold-bright);
+    font-size: 12.5px;
+    padding: 7px 16px;
+    border-radius: 100px;
+    white-space: nowrap;
+    box-shadow: 0 14px 30px -10px rgba(0,0,0,0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   footer {
     text-align: center;
@@ -294,10 +406,218 @@
   </nav>
 
   <section class="hero">
-    <span class="kicker">نمونه‌کار ۲۰۲۶</span>
-    <h1>ساختن بازی‌هایی با <em>هویت مشخص</em>، از ایده تا اجرا</h1>
-    <p>گزیده‌ای از پروژه‌های در حال ساخت، شامل توسعه بازی موبایل، طراحی مکانیک و محتوای ویدیویی.</p>
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-content">
+      <span class="kicker">نمونه‌کار ۲۰۲۶</span>
+      <h1>ساختن بازی‌هایی با <em>هویت مشخص</em>، از ایده تا اجرا</h1>
+      <p>گزیده‌ای از پروژه‌های در حال ساخت، شامل توسعه بازی موبایل، طراحی مکانیک و محتوای ویدیویی.</p>
+    </div>
   </section>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('hero-canvas');
+      const ctx = canvas.getContext('2d');
+      let w, h, cols, rows;
+      const CELL = 18;
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        w = canvas.width = rect.width;
+        h = canvas.height = rect.height;
+        cols = Math.max(4, Math.floor(w / CELL));
+        rows = Math.max(4, Math.floor(h / CELL));
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function roundRect(x, y, rw, rh, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + rw, y, x + rw, y + rh, r);
+        ctx.arcTo(x + rw, y + rh, x, y + rh, r);
+        ctx.arcTo(x, y + rh, x, y, r);
+        ctx.arcTo(x, y, x + rw, y, r);
+        ctx.closePath();
+      }
+
+      function lerpColor(c1, c2, t) {
+        return [
+          Math.round(c1[0] + (c2[0] - c1[0]) * t),
+          Math.round(c1[1] + (c2[1] - c1[1]) * t),
+          Math.round(c1[2] + (c2[2] - c1[2]) * t)
+        ];
+      }
+      const GOLD = [227, 189, 107];
+      const WOLF = [150, 58, 72];
+
+      const DIRS = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+      let snake, prevSnake, dir, food, particles = [], exploding = false, tick = 0, flash = 0;
+      const TICK_RATE = 8;
+
+      function randCell() {
+        return { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+      }
+
+      function placeFood() {
+        let f, guard = 0;
+        do { f = randCell(); guard++; } while (snake.some(s => s.x === f.x && s.y === f.y) && guard < 50);
+        food = f;
+      }
+
+      function resetSnake(len) {
+        const start = randCell();
+        snake = [];
+        for (let i = 0; i < len; i++) snake.push({ x: start.x, y: start.y });
+        prevSnake = snake.map(s => ({ ...s }));
+        dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+        placeFood();
+      }
+      resetSnake(2);
+
+      function step() {
+        prevSnake = snake.map(s => ({ ...s }));
+
+        const r = Math.random();
+        if (r < 0.16) {
+          const opts = DIRS.filter(d => !(d.x === -dir.x && d.y === -dir.y));
+          dir = opts[Math.floor(Math.random() * opts.length)];
+        } else if (r < 0.55) {
+          const dx = food.x - snake[0].x, dy = food.y - snake[0].y;
+          const prefs = Math.abs(dx) > Math.abs(dy)
+            ? [{ x: Math.sign(dx) || 1, y: 0 }, { x: 0, y: Math.sign(dy) || 1 }]
+            : [{ x: 0, y: Math.sign(dy) || 1 }, { x: Math.sign(dx) || 1, y: 0 }];
+          const choice = prefs.find(d => !(d.x === -dir.x && d.y === -dir.y));
+          if (choice) dir = choice;
+        }
+
+        const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+        const hitWall = head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows;
+        const willEat = !hitWall && head.x === food.x && head.y === food.y;
+        const body = willEat ? snake : snake.slice(0, -1);
+        const hitSelf = !hitWall && body.some(s => s.x === head.x && s.y === head.y);
+
+        if (hitWall || hitSelf) {
+          explode();
+          return;
+        }
+
+        snake.unshift(head);
+        if (willEat) placeFood();
+        else snake.pop();
+      }
+
+      function explode() {
+        exploding = true;
+        flash = 0.5;
+        particles = [];
+        snake.forEach(seg => {
+          for (let i = 0; i < 7; i++) {
+            particles.push({
+              x: seg.x * CELL + CELL / 2,
+              y: seg.y * CELL + CELL / 2,
+              vx: (Math.random() - 0.5) * 5.5,
+              vy: (Math.random() - 0.5) * 5.5,
+              life: 1,
+              gold: Math.random() < 0.5
+            });
+          }
+        });
+        setTimeout(() => {
+          exploding = false;
+          resetSnake(2);
+        }, 650);
+      }
+
+      function drawSnake(progress) {
+        const len = snake.length;
+        const sameLen = prevSnake.length === len;
+
+        for (let i = len - 1; i >= 0; i--) {
+          const cur = snake[i];
+          const prev = sameLen ? prevSnake[i] : cur;
+          const px = (prev.x + (cur.x - prev.x) * progress) * CELL;
+          const py = (prev.y + (cur.y - prev.y) * progress) * CELL;
+
+          const t = i / Math.max(1, len - 1);
+          const [rC, gC, bC] = lerpColor(GOLD, WOLF, t * 0.7);
+          const alpha = 0.92 - t * 0.35;
+
+          if (i === 0) {
+            ctx.shadowColor = 'rgba(227,189,107,0.65)';
+            ctx.shadowBlur = 14;
+          }
+          ctx.fillStyle = `rgba(${rC},${gC},${bC},${alpha})`;
+          roundRect(px + 1, py + 1, CELL - 2, CELL - 2, 5);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          if (i === 0) {
+            const cx = px + CELL / 2, cy = py + CELL / 2;
+            let ex1, ey1, ex2, ey2;
+            if (dir.x !== 0) {
+              const fx = cx + dir.x * 3.5;
+              ex1 = fx; ey1 = cy - 4; ex2 = fx; ey2 = cy + 4;
+            } else {
+              const fy = cy + dir.y * 3.5;
+              ex1 = cx - 4; ey1 = fy; ex2 = cx + 4; ey2 = fy;
+            }
+            ctx.fillStyle = 'rgba(12,10,16,0.85)';
+            ctx.beginPath(); ctx.arc(ex1, ey1, 1.6, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(ex2, ey2, 1.6, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+
+      function drawFood() {
+        const pulse = 1 + Math.sin(performance.now() / 180) * 0.12;
+        ctx.shadowColor = 'rgba(220,90,100,0.75)';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(220,90,100,0.88)';
+        ctx.beginPath();
+        ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.26 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      function drawParticles() {
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= 0.032;
+          const a = Math.max(0, p.life);
+          ctx.fillStyle = p.gold ? `rgba(227,189,107,${a})` : `rgba(220,90,100,${a})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 3 * a, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        particles = particles.filter(p => p.life > 0);
+      }
+
+      function loop() {
+        ctx.fillStyle = 'rgba(12,10,16,0.22)';
+        ctx.fillRect(0, 0, w, h);
+
+        if (flash > 0) {
+          ctx.fillStyle = `rgba(227,189,107,${flash})`;
+          ctx.fillRect(0, 0, w, h);
+          flash -= 0.04;
+        }
+
+        if (exploding) {
+          drawParticles();
+        } else {
+          tick++;
+          if (tick >= TICK_RATE) { tick = 0; step(); }
+          drawFood();
+          drawSnake(tick / TICK_RATE);
+        }
+
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
 
   <div class="section-head">
     <h2>پیش‌نمایش موبایل</h2>
@@ -309,17 +629,20 @@
     <div class="phone">
       <div class="phone-frame">
         <div class="phone-screen">
-          <video controls preload="none" src="videos/mobile1.mp4"></video>
+          <video controls preload="none" poster="thumbs/mobile1.jpg" src="videos/mobile1.mp4"></video>
         </div>
       </div>
       <h4>گیم‌پلی — دور اول</h4>
       <span>اجرا روی Android</span>
+      <div class="link-group" style="justify-content:center; margin-top:14px;">
+        <a class="link-chip primary" href="#" target="_blank" rel="noopener">مشاهده کلیپ کامل <span class="arrow">↗</span></a>
+      </div>
     </div>
 
     <div class="phone">
       <div class="phone-frame">
         <div class="phone-screen">
-          <video controls preload="none" src="videos/mobile2.mp4"></video>
+          <video controls preload="none" poster="thumbs/mobile2.jpg" src="videos/mobile2.mp4"></video>
         </div>
       </div>
       <h4>منوی گاراژ</h4>
@@ -328,6 +651,11 @@
 
     <!-- برای اضافه‌کردن قاب بیشتر، همین بلاک <div class="phone">...</div> رو کپی کن -->
 
+  </div>
+
+  <div class="link-group" style="justify-content:center; max-width:1180px; margin:-40px auto 90px; padding:0 24px;">
+    <a class="link-chip primary" href="#" target="_blank" rel="noopener">دانلود نسخه اندروید <span class="arrow">↗</span></a>
+    <a class="link-chip" href="#" target="_blank" rel="noopener">Google Play <span class="arrow">↗</span></a>
   </div>
 
   <div class="section-head">
@@ -340,7 +668,7 @@
 
       <div class="card featured">
         <div class="video-box">
-          <video controls preload="none" src="videos/video1.mp4"></video>
+          <video controls preload="none" poster="thumbs/video1.jpg" src="videos/video1.mp4"></video>
         </div>
         <div class="meta-row">
           <h3>The Rooftop Driver — رونمایی گاراژ</h3>
@@ -350,11 +678,15 @@
           </div>
         </div>
         <p class="desc">نمایش سیستم گاراژ و انتخاب خودرو در بازی رانندگی معکوس، با ۲۹ نوع خودرو در ۵ رده.</p>
+        <div class="link-group">
+          <a class="link-chip primary" href="#" target="_blank" rel="noopener">دانلود از itch.io <span class="arrow">↗</span></a>
+          <a class="link-chip" href="#" target="_blank" rel="noopener">Google Play <span class="arrow">↗</span></a>
+        </div>
       </div>
 
       <div class="card">
         <div class="video-box">
-          <video controls preload="none" src="videos/video2.mp4"></video>
+          <video controls preload="none" poster="thumbs/video2.jpg" src="videos/video2.mp4"></video>
         </div>
         <div class="meta-row">
           <h3>The Rooftop Driver — رونمایی محیط</h3>
@@ -365,13 +697,13 @@
 
       <div class="card">
         <div class="video-box">
-          <video controls preload="none" src="videos/video3.mp4"></video>
+          <video controls preload="none" poster="thumbs/video3.jpg" src="videos/video3.mp4"></video>
         </div>
         <div class="meta-row">
-          <h3>کلیپ منتخب</h3>
-          <div class="tags"><span class="tag">پروتوتایپ</span></div>
+          <h3>My Buddy Died — کلیپ منتخب</h3>
+          <div class="tags"><span class="tag">ماینکرفت</span></div>
         </div>
-        <p class="desc">یه پروتوتایپ از یه بازی ترسناک باحال</p>
+        <p class="desc">لحظه‌ای منتخب از سریِ گیم‌پلی مودشده‌ی ماینکرفت.</p>
       </div>
 
     </div>
@@ -381,23 +713,33 @@
     <div class="cta-box">
       <h2>در حال ساخت چیزی جدید هستم</h2>
       <p>اگر دنبال همکاری یا گفت‌وگو درباره یک پروژه‌اید، خوشحال می‌شوم بشنوم.</p>
-      <a href="mailto:unique.amin.orifi@gmail.com">تماس با من</a>
-      
-      <button onclick="copyEmail()">
-        unique.amin.orifi@gmail.com
-      </button>
+      <div class="email-row">
+        <button class="copy-btn" onclick="copyEmail()">کپی ایمیل</button>
+        <span class="email-text" id="email-text">you@example.com</span>
+        <span class="copy-toast" id="copy-toast">کپی شد</span>
+      </div>
     </div>
   </div>
 
+  <script>
+    function copyEmail() {
+      const email = document.getElementById('email-text').textContent;
+      navigator.clipboard.writeText(email).then(() => {
+        const toast = document.getElementById('copy-toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1800);
+      });
+    }
+  </script>
+
   <footer>
     <span class="gold">Psycho Sage</span> — استودیوی توسعه بازی مستقل
+    <div class="link-group" style="justify-content:center; margin-top:18px;">
+      <a class="link-chip social" href="#" target="_blank" rel="noopener">یوتیوب <span class="arrow">↗</span></a>
+      <a class="link-chip social" href="#" target="_blank" rel="noopener">اینستاگرام <span class="arrow">↗</span></a>
+      <a class="link-chip social" href="#" target="_blank" rel="noopener">لینکدین <span class="arrow">↗</span></a>
+    </div>
   </footer>
-
-<script>
-function copyEmail() {
-    navigator.clipboard.writeText("unique.amin.orifi@gmail.com");
-}
-</script>
 
 </body>
 </html>
