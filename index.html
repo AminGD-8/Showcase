@@ -450,6 +450,8 @@
 
       const DIRS = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
       let snake, prevSnake, dir, food, particles = [], exploding = false, tick = 0, flash = 0;
+      let headTrail = [];
+      const TRAIL_LEN = 7;
       const TICK_RATE = 8;
 
       function randCell() {
@@ -468,6 +470,7 @@
         for (let i = 0; i < len; i++) snake.push({ x: start.x, y: start.y });
         prevSnake = snake.map(s => ({ ...s }));
         dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+        headTrail = [];
         placeFood();
       }
       resetSnake(2);
@@ -508,6 +511,7 @@
         exploding = true;
         flash = 0.5;
         particles = [];
+        headTrail = [];
         snake.forEach(seg => {
           for (let i = 0; i < 7; i++) {
             particles.push({
@@ -526,6 +530,30 @@
         }, 650);
       }
 
+      function headPos(progress) {
+        const cur = snake[0];
+        const prev = prevSnake.length === snake.length ? prevSnake[0] : cur;
+        return {
+          x: (prev.x + (cur.x - prev.x) * progress) * CELL + CELL / 2,
+          y: (prev.y + (cur.y - prev.y) * progress) * CELL + CELL / 2
+        };
+      }
+
+      function drawTrail() {
+        const n = headTrail.length;
+        for (let i = 0; i < n; i++) {
+          const p = headTrail[i];
+          const t = i / Math.max(1, n - 1); // 0 = oldest, 1 = newest
+          ctx.shadowColor = 'rgba(227,189,107,0.5)';
+          ctx.shadowBlur = 12 * t;
+          ctx.fillStyle = `rgba(227,189,107,${0.32 * t})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, (CELL * 0.42) * (0.5 + 0.5 * t), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+
       function drawSnake(progress) {
         const len = snake.length;
         const sameLen = prevSnake.length === len;
@@ -540,10 +568,8 @@
           const [rC, gC, bC] = lerpColor(GOLD, WOLF, t * 0.7);
           const alpha = 0.92 - t * 0.35;
 
-          if (i === 0) {
-            ctx.shadowColor = 'rgba(227,189,107,0.65)';
-            ctx.shadowBlur = 14;
-          }
+          ctx.shadowColor = `rgba(${rC},${gC},${bC},0.75)`;
+          ctx.shadowBlur = 18 - t * 10;
           ctx.fillStyle = `rgba(${rC},${gC},${bC},${alpha})`;
           roundRect(px + 1, py + 1, CELL - 2, CELL - 2, 5);
           ctx.fill();
@@ -592,8 +618,7 @@
       }
 
       function loop() {
-        ctx.fillStyle = 'rgba(12,10,16,0.22)';
-        ctx.fillRect(0, 0, w, h);
+        ctx.clearRect(0, 0, w, h);
 
         if (flash > 0) {
           ctx.fillStyle = `rgba(227,189,107,${flash})`;
@@ -606,8 +631,14 @@
         } else {
           tick++;
           if (tick >= TICK_RATE) { tick = 0; step(); }
+
+          const progress = tick / TICK_RATE;
+          headTrail.push(headPos(progress));
+          if (headTrail.length > TRAIL_LEN) headTrail.shift();
+
+          drawTrail();
           drawFood();
-          drawSnake(tick / TICK_RATE);
+          drawSnake(progress);
         }
 
         requestAnimationFrame(loop);
