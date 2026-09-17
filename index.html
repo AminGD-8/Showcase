@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Psycho Sage — نمونه‌کارها</title>
+<meta name="description" content="Psycho Sage — نمونه‌کارهای توسعه بازی: پروژه‌های موبایل و کامپیوتری، از پروتوتایپ تا محصول نهایی.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fa_IR">
+<meta name="theme-color" content="#0c0a10">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0a10'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c9a24b' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;800;900&display=swap" rel="stylesheet">
@@ -38,6 +43,16 @@
   @keyframes rise {
     from { opacity: 0; transform: translateY(14px); }
     to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   /* ---------- Nav ---------- */
@@ -314,16 +329,36 @@
 
   /* ---------- CTA / footer ---------- */
   .cta {
+    position: relative;
     max-width: 1180px;
     margin: 0 auto;
     padding: 0 24px 100px;
     text-align: center;
   }
+  .cta::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 460px 260px at 50% 50%, rgba(201,162,75,0.10), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
   .cta-box {
+    position: relative;
+    z-index: 1;
     border: 1px solid var(--card-line);
     border-radius: 14px;
     padding: 56px 32px;
     background: linear-gradient(180deg, rgba(201,162,75,0.05), transparent);
+    overflow: hidden;
+  }
+  #cta-canvas {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 6px;
+    height: 42px;
+    pointer-events: none;
   }
   .cta-box h2 { margin: 0 0 12px; font-size: 24px; font-weight: 700; }
   .cta-box p { margin: 0 0 26px; color: var(--ink-muted); font-size: 15px; }
@@ -413,6 +448,9 @@
 
   <script>
     (function () {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
       const canvas = document.getElementById('hero-canvas');
       const ctx = canvas.getContext('2d');
       let w, h, cols, rows;
@@ -715,7 +753,7 @@
 
   <div class="section-head">
     <h2>بازیای کامپیوتری</h2>
-    <span>پیش‌نمایش بازی‌های کامیوتری ساخته شده</span>
+    <span>پیش‌نمایش بازی‌های کامپیوتری ساخته شده</span>
   </div>
 
   <div class="wrap">
@@ -778,6 +816,7 @@
         <span class="email-text" id="email-text">unique.amin.orifi@gmail.com</span>
         <span class="copy-toast" id="copy-toast">کپی شد</span>
       </div>
+      <canvas id="cta-canvas"></canvas>
     </div>
   </div>
 
@@ -790,6 +829,305 @@
         setTimeout(() => toast.classList.remove('show'), 1800);
       });
     }
+
+    (function () {
+      const targets = document.querySelectorAll('.card, .phone, .cta-box');
+      if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        targets.forEach(el => el.classList.add('visible'));
+        return;
+      }
+      targets.forEach(el => el.classList.add('reveal'));
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      targets.forEach(el => io.observe(el));
+    })();
+
+    (function () {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      const canvas = document.getElementById('cta-canvas');
+      const ctx = canvas.getContext('2d');
+      let w, h, pipeXs, bricks, clouds;
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        w = canvas.width = rect.width;
+        h = canvas.height = rect.height;
+        pipeXs = [w * 0.1, w * 0.36, w * 0.64, w * 0.9];
+        bricks = [];
+        for (let x = 6; x < w - 6; x += 11) {
+          if (pipeXs.some(px => Math.abs(px - x) < 12)) continue;
+          bricks.push(x);
+        }
+        clouds = [w * 0.22, w * 0.5, w * 0.78];
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      const RED = 'rgba(196,64,58,0.95)';
+      const RED_DARK = 'rgba(150,45,42,0.95)';
+      const SKIN = 'rgba(227,189,107,0.95)';
+      const GOLD_DIM = 'rgba(201,162,75,0.45)';
+      const COIN = 'rgba(227,189,107,0.95)';
+      const MUSH = 'rgba(180,70,85,0.9)';
+
+      let charX = w / 2, dir = 1, speed = 0.6;
+      let jumpVel = 0, yOffset = 0, grounded = true, squash = 0;
+      let growTimer = 0;
+      let mushroom = { x: 0, active: false };
+      let mushroomCooldown = 140;
+      let coin = { x: 0, active: false, spin: 0 };
+      let coinCooldown = 90;
+      let pipeState = 'none'; // none | entering | hidden | exiting
+      let pipeTimer = 0;
+      let pipeDepth = 0;
+      let particles = [];
+
+      function resetIfNeeded() {
+        if (!pipeXs) resize();
+      }
+
+      function spawnParticles(x, y, color, n) {
+        for (let i = 0; i < n; i++) {
+          particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 2.4,
+            vy: -Math.random() * 2 - 0.4,
+            life: 1,
+            color
+          });
+        }
+      }
+
+      function randomOtherPipe(excludeX) {
+        const others = pipeXs.filter(x => x !== excludeX);
+        return others[Math.floor(Math.random() * others.length)];
+      }
+
+      function drawClouds() {
+        ctx.fillStyle = 'rgba(201,162,75,0.10)';
+        clouds.forEach(cx => {
+          ctx.beginPath();
+          ctx.arc(cx, 5, 3, 0, Math.PI * 2);
+          ctx.arc(cx + 4, 6, 2.4, 0, Math.PI * 2);
+          ctx.arc(cx - 4, 6, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      function drawBricks() {
+        ctx.strokeStyle = GOLD_DIM;
+        ctx.lineWidth = 1;
+        bricks.forEach(x => {
+          ctx.beginPath();
+          ctx.moveTo(x, h - 1);
+          ctx.lineTo(x, h - 4);
+          ctx.stroke();
+        });
+        ctx.beginPath();
+        ctx.moveTo(0, h - 1);
+        ctx.lineTo(w, h - 1);
+        ctx.stroke();
+      }
+
+      function drawPipe(x) {
+        const pw = 13, ph = 19;
+        ctx.fillStyle = 'rgba(23,19,29,0.92)';
+        ctx.strokeStyle = GOLD_DIM;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.roundRect(x - pw / 2, h - ph, pw, ph, 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.roundRect(x - pw / 2 - 2.5, h - ph - 5, pw + 5, 7, 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      function drawMushroom(x) {
+        const y = h - 6;
+        ctx.fillStyle = MUSH;
+        ctx.beginPath();
+        ctx.arc(x, y - 4, 5, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(236,230,224,0.9)';
+        ctx.fillRect(x - 3, y - 4, 6, 4);
+      }
+
+      function drawCoin(c) {
+        const y = h - 9;
+        const squeeze = Math.abs(Math.sin(c.spin));
+        ctx.fillStyle = COIN;
+        ctx.beginPath();
+        ctx.ellipse(c.x, y, 3 * squeeze + 0.6, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawParticles() {
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.12;
+          p.life -= 0.05;
+          ctx.fillStyle = p.color.replace('ALPHA', Math.max(0, p.life));
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 1.6 * Math.max(0, p.life), 0, Math.PI * 2);
+          ctx.fill();
+        });
+        particles = particles.filter(p => p.life > 0);
+      }
+
+      function drawChar(x, y, scale) {
+        const sx = scale, sy = scale * (1 - squash * 0.3);
+        // cap
+        ctx.fillStyle = RED;
+        ctx.beginPath();
+        ctx.roundRect(x - 7 * sx, y - 18 * sy, 14 * sx, 5 * sy, 2 * sx);
+        ctx.fill();
+        // face
+        ctx.fillStyle = SKIN;
+        ctx.beginPath();
+        ctx.roundRect(x - 5 * sx, y - 13 * sy, 10 * sx, 5 * sy, 2 * sx);
+        ctx.fill();
+        // body (red suit)
+        ctx.fillStyle = RED_DARK;
+        ctx.beginPath();
+        ctx.roundRect(x - 6 * sx, y - 8 * sy, 12 * sx, 8 * sy, 3 * sx);
+        ctx.fill();
+        // eyes
+        ctx.fillStyle = 'rgba(12,10,16,0.85)';
+        ctx.beginPath(); ctx.arc(x - 2 * sx, y - 11 * sy, 1 * sx, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + 2 * sx, y - 11 * sy, 1 * sx, 0, Math.PI * 2); ctx.fill();
+      }
+
+      function update() {
+        resetIfNeeded();
+        const margin = 10;
+
+        if (pipeState === 'none') {
+          charX += dir * speed;
+          if (charX < margin) { charX = margin; dir = 1; }
+          if (charX > w - margin) { charX = w - margin; dir = -1; }
+
+          if (Math.random() < 0.01) dir *= -1;
+          if (Math.random() < 0.006) speed = 0.4 + Math.random() * 0.9;
+
+          if (grounded && Math.random() < 0.016) {
+            jumpVel = -(2.8 + Math.random() * 1.6);
+            grounded = false;
+          }
+          if (grounded && squash === 0 && Math.random() < 0.004) squash = 6;
+
+          if (squash > 0) squash--;
+
+          if (!grounded) {
+            jumpVel += 0.22;
+            yOffset += jumpVel;
+            if (yOffset >= 0) {
+              yOffset = 0; jumpVel = 0; grounded = true;
+              spawnParticles(charX, h - 2, 'rgba(201,162,75,ALPHA)', 4);
+            }
+          }
+
+          if (growTimer > 0) growTimer--;
+
+          if (mushroom.active && Math.abs(charX - mushroom.x) < 7) {
+            mushroom.active = false;
+            growTimer = 220;
+            spawnParticles(mushroom.x, h - 8, 'rgba(180,70,85,ALPHA)', 8);
+          }
+          if (!mushroom.active) {
+            mushroomCooldown--;
+            if (mushroomCooldown <= 0) {
+              const x = margin + Math.random() * (w - margin * 2);
+              if (!pipeXs.some(px => Math.abs(px - x) < 16)) {
+                mushroom.x = x;
+                mushroom.active = true;
+              }
+              mushroomCooldown = 180 + Math.random() * 220;
+            }
+          }
+
+          if (coin.active) {
+            coin.spin += 0.25;
+            if (Math.abs(charX - coin.x) < 6) {
+              coin.active = false;
+              spawnParticles(coin.x, h - 10, 'rgba(227,189,107,ALPHA)', 6);
+            }
+          } else {
+            coinCooldown--;
+            if (coinCooldown <= 0) {
+              const x = margin + Math.random() * (w - margin * 2);
+              if (!pipeXs.some(px => Math.abs(px - x) < 16)) {
+                coin.x = x;
+                coin.active = true;
+                coin.spin = 0;
+              }
+              coinCooldown = 90 + Math.random() * 150;
+            }
+          }
+
+          if (grounded) {
+            pipeXs.forEach((px) => {
+              if (Math.abs(charX - px) < 3 && Math.random() < 0.045) {
+                pipeState = 'entering';
+                pipeTimer = 0;
+                pipeDepth = 0;
+                charX = px;
+                canvas._targetPipe = randomOtherPipe(px);
+              }
+            });
+          }
+        } else if (pipeState === 'entering') {
+          pipeTimer++;
+          pipeDepth = Math.min(1, pipeTimer / 9);
+          if (pipeTimer >= 9) { pipeState = 'hidden'; pipeTimer = 0; }
+        } else if (pipeState === 'hidden') {
+          pipeTimer++;
+          if (pipeTimer >= 14) {
+            pipeState = 'exiting';
+            pipeTimer = 0;
+            charX = canvas._targetPipe;
+            dir = Math.random() < 0.5 ? -1 : 1;
+            speed = 0.4 + Math.random() * 0.9;
+          }
+        } else if (pipeState === 'exiting') {
+          pipeTimer++;
+          pipeDepth = Math.max(0, 1 - pipeTimer / 9);
+          if (pipeTimer >= 9) { pipeState = 'none'; pipeDepth = 0; }
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        drawClouds();
+        drawBricks();
+        pipeXs.forEach(drawPipe);
+        if (mushroom.active) drawMushroom(mushroom.x);
+        if (coin.active) drawCoin(coin);
+        drawParticles();
+
+        if (pipeState !== 'hidden') {
+          const scale = (growTimer > 0 ? 1.3 : 1) * (1 - pipeDepth * 0.9);
+          const y = h - 2 + pipeDepth * 14;
+          if (pipeDepth < 0.95) drawChar(charX, y + yOffset, Math.max(0.15, scale));
+        }
+      }
+
+      function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
   </script>
 
   <footer>
