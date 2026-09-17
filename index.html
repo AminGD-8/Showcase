@@ -452,6 +452,8 @@
       let snake, prevSnake, dir, food, particles = [], exploding = false, tick = 0, flash = 0;
       let headTrail = [];
       const TRAIL_LEN = 7;
+      let bodyEchoes = [];
+      const ECHO_FRAMES = 4;
       const TICK_RATE = 8;
 
       function randCell() {
@@ -471,6 +473,7 @@
         prevSnake = snake.map(s => ({ ...s }));
         dir = DIRS[Math.floor(Math.random() * DIRS.length)];
         headTrail = [];
+        bodyEchoes = [];
         placeFood();
       }
       resetSnake(2);
@@ -512,6 +515,7 @@
         flash = 0.5;
         particles = [];
         headTrail = [];
+        bodyEchoes = [];
         snake.forEach(seg => {
           for (let i = 0; i < 7; i++) {
             particles.push({
@@ -554,9 +558,26 @@
         }
       }
 
+      function drawBodyEchoes() {
+        const n = bodyEchoes.length;
+        for (let f = 0; f < n; f++) {
+          const t = f / Math.max(1, n - 1); // 0 = oldest echo, 1 = most recent echo
+          const alpha = 0.05 + 0.1 * t;
+          bodyEchoes[f].forEach(seg => {
+            ctx.shadowColor = `rgba(${seg.r},${seg.g},${seg.b},0.4)`;
+            ctx.shadowBlur = 6;
+            ctx.fillStyle = `rgba(${seg.r},${seg.g},${seg.b},${alpha})`;
+            roundRect(seg.x + 1, seg.y + 1, CELL - 2, CELL - 2, 5);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          });
+        }
+      }
+
       function drawSnake(progress) {
         const len = snake.length;
         const sameLen = prevSnake.length === len;
+        const snapshot = [];
 
         for (let i = len - 1; i >= 0; i--) {
           const cur = snake[i];
@@ -567,6 +588,8 @@
           const t = i / Math.max(1, len - 1);
           const [rC, gC, bC] = lerpColor(GOLD, WOLF, t * 0.7);
           const alpha = 0.92 - t * 0.35;
+
+          snapshot.push({ x: px, y: py, r: rC, g: gC, b: bC });
 
           ctx.shadowColor = `rgba(${rC},${gC},${bC},0.75)`;
           ctx.shadowBlur = 18 - t * 10;
@@ -590,6 +613,9 @@
             ctx.beginPath(); ctx.arc(ex2, ey2, 1.6, 0, Math.PI * 2); ctx.fill();
           }
         }
+
+        bodyEchoes.push(snapshot);
+        if (bodyEchoes.length > ECHO_FRAMES) bodyEchoes.shift();
       }
 
       function drawFood() {
@@ -636,6 +662,7 @@
           headTrail.push(headPos(progress));
           if (headTrail.length > TRAIL_LEN) headTrail.shift();
 
+          drawBodyEchoes();
           drawTrail();
           drawFood();
           drawSnake(progress);
