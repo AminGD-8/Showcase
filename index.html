@@ -355,7 +355,6 @@
   #cta-canvas {
     position: absolute;
     left: -32px;
-    right: -32px;
     bottom: 0;
     height: 130px;
     pointer-events: none;
@@ -851,29 +850,78 @@
     })();
 
     (function () {
-      const ENABLE_CTA_GAME = false; // بذار false تا این بازی غیرفعال بشه
+      const ENABLE_CTA_GAME = true; // بذار false تا این بازی غیرفعال بشه
       if (!ENABLE_CTA_GAME) return;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
       const canvas = document.getElementById('cta-canvas');
       const ctx = canvas.getContext('2d');
-      let w, h, pipeXs, bricks, blocks, clouds;
+      let w, h, pipeXs, bricks, blocks, clouds, enemies;
+      let blockTarget = 2, blockRespawnTimer = 40;
+      let enemyTarget = 2, enemyRespawnTimer = 40;
 
       const MARGIN = 10;
       const CHAR_SCALE = 1.7;
+      const PIPE_H = 26;
+
+      function trySpawnBlock() {
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const x = MARGIN + Math.random() * (w - MARGIN * 2);
+          const tooCloseToPipe = pipeXs.some(px => Math.abs(px - x) < 22);
+          const tooCloseToBlock = blocks.some(b => Math.abs(b.x - x) < w * 0.15);
+          if (!tooCloseToPipe && !tooCloseToBlock) {
+            return {
+              x,
+              y: (h - 3) - (40 + Math.random() * 20),
+              used: false,
+              bounce: 0,
+              burstTimer: 0,
+              burst: false,
+              type: Math.random() < 0.5 ? 'coin' : 'mushroom'
+            };
+          }
+        }
+        return null;
+      }
+
+      function trySpawnEnemy() {
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const x = MARGIN + 10 + Math.random() * (w - (MARGIN + 10) * 2);
+          const tooCloseToPipe = pipeXs.some(px => Math.abs(px - x) < 24);
+          const tooCloseToEnemy = enemies.some(e => Math.abs(e.x - x) < w * 0.18);
+          if (!tooCloseToPipe && !tooCloseToEnemy) {
+            const range = 14 + Math.random() * 18;
+            return {
+              x,
+              baseX: x,
+              range,
+              dir: Math.random() < 0.5 ? -1 : 1,
+              speed: 0.28 + Math.random() * 0.22,
+              squished: false,
+              squishTimer: 0,
+              burst: false,
+              bob: Math.random() * Math.PI * 2
+            };
+          }
+        }
+        return null;
+      }
 
       function resize() {
-        const rect = canvas.getBoundingClientRect();
-        w = canvas.width = rect.width;
-        h = canvas.height = rect.height;
+        const parentRect = canvas.parentElement.getBoundingClientRect();
+        const fullW = Math.round(parentRect.width + 64); // cancel the box's 32px side padding on both edges
+        canvas.style.width = fullW + 'px';
+        canvas.style.height = '130px';
+        w = canvas.width = fullW;
+        h = canvas.height = 130;
 
-        const pipeCount = 2 + Math.floor(Math.random() * 2); // 2 or 3
+        const pipeCount = 3 + Math.floor(Math.random() * 3); // 3, 4, or 5
         pipeXs = [];
         let guard = 0;
-        while (pipeXs.length < pipeCount && guard < 200) {
+        while (pipeXs.length < pipeCount && guard < 300) {
           guard++;
           const x = MARGIN + Math.random() * (w - MARGIN * 2);
-          if (pipeXs.every(px => Math.abs(px - x) > w * 0.22)) pipeXs.push(x);
+          if (pipeXs.every(px => Math.abs(px - x) > w * 0.14)) pipeXs.push(x);
         }
         pipeXs.sort((a, b) => a - b);
 
@@ -883,23 +931,21 @@
           bricks.push(x);
         }
 
+        blockTarget = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4
         blocks = [];
-        let bguard = 0;
-        while (blocks.length < 2 && bguard < 200) {
-          bguard++;
-          const x = MARGIN + Math.random() * (w - MARGIN * 2);
-          const tooCloseToPipe = pipeXs.some(px => Math.abs(px - x) < 22);
-          const tooCloseToBlock = blocks.some(b => Math.abs(b.x - x) < w * 0.22);
-          if (!tooCloseToPipe && !tooCloseToBlock) {
-            blocks.push({
-              x,
-              y: (h - 3) - (30 + Math.random() * 16),
-              used: false,
-              bounce: 0,
-              type: Math.random() < 0.5 ? 'coin' : 'mushroom'
-            });
-          }
+        for (let i = 0; i < blockTarget; i++) {
+          const b = trySpawnBlock();
+          if (b) blocks.push(b);
         }
+        blockRespawnTimer = 40;
+
+        enemyTarget = 2 + Math.floor(Math.random() * 2); // 2 or 3
+        enemies = [];
+        for (let i = 0; i < enemyTarget; i++) {
+          const e = trySpawnEnemy();
+          if (e) enemies.push(e);
+        }
+        enemyRespawnTimer = 50;
 
         clouds = [
           { x: w * 0.15, y: 6, s: 1, v: 0.05 },
@@ -910,22 +956,18 @@
       window.addEventListener('resize', resize);
       resize();
 
-      const RED = 'rgba(196,64,58,0.95)';
       const RED_DARK = 'rgba(150,45,42,0.95)';
-      const SKIN = 'rgba(227,189,107,0.95)';
       const GOLD_DIM = 'rgba(201,162,75,0.55)';
-      const COIN = 'rgba(227,189,107,0.95)';
       const MUSH = 'rgba(180,70,85,0.9)';
 
       let charX = w / 2, dir = 1, speed = 0.55;
+      let dirCooldown = 60;
       let jumpVel = 0, yOffset = 0, grounded = true, squash = 0;
       let growTimer = 0;
       let walkPhase = 0;
-      let mushroom = { x: 0, active: false };
-      let mushroomCooldown = 140;
-      let coin = { x: 0, active: false, spin: 0 };
-      let coinCooldown = 90;
-      let pipeState = 'none'; // none | entering | hidden | exiting
+      let mushroom = { active: false, x: 0, popFrom: 0, popT: 1 };
+      let poppingCoins = [];
+      let pipeState = 'none'; // none | up | up_hold | down | hidden | rise | rise_hold | off
       let pipeTimer = 0;
       let pipeDepth = 0;
       let particles = [];
@@ -933,6 +975,8 @@
       function resetIfNeeded() {
         if (!pipeXs) resize();
       }
+
+      function easeOut(t) { return t * (2 - t); }
 
       function spawnParticles(x, y, color, n) {
         for (let i = 0; i < n; i++) {
@@ -963,86 +1007,190 @@
         });
       }
 
-      function drawBricks() {
-        // filled ground strip
-        ctx.fillStyle = 'rgba(23,19,29,0.55)';
-        ctx.fillRect(0, h - 6, w, 6);
-        ctx.strokeStyle = 'rgba(201,162,75,0.35)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, h - 6);
-        ctx.lineTo(w, h - 6);
-        ctx.stroke();
+      const OUTLINE = 'rgba(10,8,14,0.85)';
 
-        // brick texture ticks
-        ctx.strokeStyle = GOLD_DIM;
-        bricks.forEach(x => {
-          ctx.beginPath();
-          ctx.moveTo(x, h - 1);
-          ctx.lineTo(x, h - 5);
-          ctx.stroke();
-        });
+      function drawBricks() {
+        const rowH = 7;
+        const y0 = h - rowH;
+        ctx.fillStyle = 'rgba(30,24,20,0.7)';
+        ctx.fillRect(0, y0, w, rowH);
+
+        // individual brick highlight/shadow for a chunky look
+        let bx = -6;
+        let row = 0;
+        while (bx < w) {
+          const bw2 = 13;
+          const skip = pipeXs.some(px => Math.abs(px - (bx + bw2 / 2)) < 14);
+          if (!skip) {
+            ctx.fillStyle = row % 2 === 0 ? 'rgba(201,162,75,0.16)' : 'rgba(201,162,75,0.1)';
+            ctx.fillRect(bx, y0 + 0.5, bw2 - 1, rowH - 1);
+            ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+            ctx.lineWidth = 0.6;
+            ctx.strokeRect(bx, y0 + 0.5, bw2 - 1, rowH - 1);
+          }
+          bx += bw2;
+          row++;
+        }
+
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.moveTo(0, h - 1);
-        ctx.lineTo(w, h - 1);
+        ctx.moveTo(0, y0 + 0.5);
+        ctx.lineTo(w, y0 + 0.5);
         ctx.stroke();
       }
 
       function drawPipe(x) {
-        const pw = 18, ph = 26;
-        ctx.fillStyle = 'rgba(23,19,29,0.92)';
-        ctx.strokeStyle = GOLD_DIM;
-        ctx.lineWidth = 1.4;
+        const pw = 18;
+        const grad = ctx.createLinearGradient(x - pw / 2, 0, x + pw / 2, 0);
+        grad.addColorStop(0, 'rgba(46,38,30,0.95)');
+        grad.addColorStop(0.35, 'rgba(58,48,38,0.95)');
+        grad.addColorStop(0.55, 'rgba(38,32,26,0.95)');
+        grad.addColorStop(1, 'rgba(26,22,18,0.95)');
+
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.roundRect(x - pw / 2, h - ph, pw, ph, 2);
+        ctx.roundRect(x - pw / 2, h - PIPE_H, pw, PIPE_H, 2);
         ctx.fill();
         ctx.stroke();
+
+        // highlight strip
+        ctx.strokeStyle = 'rgba(227,189,107,0.5)';
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.roundRect(x - pw / 2 - 3, h - ph - 7, pw + 6, 9, 2);
+        ctx.moveTo(x - pw / 2 + 4, h - PIPE_H + 6);
+        ctx.lineTo(x - pw / 2 + 4, h - 2);
+        ctx.stroke();
+
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.roundRect(x - pw / 2 - 3, h - PIPE_H - 7, pw + 6, 9, 2);
         ctx.fill();
         ctx.stroke();
+        ctx.strokeStyle = 'rgba(227,189,107,0.55)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x - pw / 2 - 1, h - PIPE_H - 5);
+        ctx.lineTo(x + pw / 2 + 1, h - PIPE_H - 5);
+        ctx.stroke();
+      }
+
+      function drawEnemy(e) {
+        const squish = e.squished ? Math.min(1, e.squishTimer / 10) : 0;
+        const bodyH = 9 * (1 - squish * 0.7);
+        const y = h - 2;
+        ctx.save();
+        ctx.translate(e.x, 0);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0, y, 5, 1.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const grad = ctx.createLinearGradient(0, y - bodyH, 0, y);
+        grad.addColorStop(0, 'rgba(168,78,108,0.95)');
+        grad.addColorStop(1, 'rgba(120,48,72,0.95)');
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.roundRect(-5.5, y - bodyH, 11, bodyH, 3.5);
+        ctx.fill();
+        ctx.stroke();
+
+        if (!e.squished) {
+          // big eyes with highlight
+          ctx.fillStyle = 'rgba(236,230,224,0.95)';
+          ctx.beginPath(); ctx.arc(-2.2, y - bodyH + 3.2, 1.5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(2.2, y - bodyH + 3.2, 1.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = 'rgba(12,10,16,0.9)';
+          ctx.beginPath(); ctx.arc(-2, y - bodyH + 3.4, 0.8, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(2.4, y - bodyH + 3.4, 0.8, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(12,10,16,0.6)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath(); ctx.moveTo(-3.8, y - bodyH + 0.6); ctx.lineTo(-1, y - bodyH); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(3.8, y - bodyH + 0.6); ctx.lineTo(1, y - bodyH); ctx.stroke();
+        }
+        ctx.restore();
       }
 
       function drawBlock(b) {
         const bw = 16, bh = 16;
         const lift = Math.min(b.bounce, 4);
+        const fade = b.used ? Math.max(0, 1 - b.burstTimer / 30) : 1;
         const by = b.y - bh - lift;
-        ctx.fillStyle = b.used ? 'rgba(60,54,66,0.55)' : 'rgba(201,162,75,0.55)';
-        ctx.strokeStyle = b.used ? 'rgba(201,162,75,0.18)' : 'rgba(227,189,107,0.7)';
-        ctx.lineWidth = 1.2;
+        ctx.globalAlpha = fade;
+
+        const grad = ctx.createLinearGradient(b.x - bw / 2, by, b.x + bw / 2, by + bh);
+        if (b.used) {
+          grad.addColorStop(0, 'rgba(74,66,60,0.6)');
+          grad.addColorStop(1, 'rgba(46,40,36,0.6)');
+        } else {
+          grad.addColorStop(0, 'rgba(230,196,130,0.85)');
+          grad.addColorStop(0.5, 'rgba(201,162,75,0.85)');
+          grad.addColorStop(1, 'rgba(160,124,55,0.85)');
+        }
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.roundRect(b.x - bw / 2, by, bw, bh, 3);
         ctx.fill();
         ctx.stroke();
+
         if (!b.used) {
-          ctx.fillStyle = 'rgba(12,10,16,0.75)';
-          ctx.font = 'bold 10px Vazirmatn, sans-serif';
+          ctx.strokeStyle = 'rgba(255,240,210,0.55)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(b.x - bw / 2 + 2.5, by + 2);
+          ctx.lineTo(b.x + bw / 2 - 5, by + 2);
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(12,10,16,0.8)';
+          ctx.font = 'bold 11px Vazirmatn, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText('?', b.x, by + bh / 2 + 1);
         }
+        ctx.globalAlpha = 1;
       }
 
-      function drawMushroom(x) {
-        const y = h - 6;
+      function drawMushroomAt(x, y) {
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.2;
         ctx.fillStyle = MUSH;
         ctx.beginPath();
         ctx.arc(x, y - 5, 7, Math.PI, 0);
         ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x - 2, y - 8, 2, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.fillStyle = 'rgba(236,230,224,0.9)';
-        ctx.fillRect(x - 4, y - 5, 8, 5);
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(x - 4, y - 5, 8, 5, 1.5);
+        ctx.fill();
+        ctx.stroke();
       }
 
-      function drawCoin(c) {
-        const y = h - 10;
-        const squeeze = Math.abs(Math.sin(c.spin));
-        ctx.shadowColor = 'rgba(227,189,107,0.7)';
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = COIN;
-        ctx.beginPath();
-        ctx.ellipse(c.x, y, 4 * squeeze + 0.8, 5.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+      function drawPoppingCoins() {
+        poppingCoins.forEach(c => {
+          ctx.shadowColor = 'rgba(227,189,107,0.7)';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = `rgba(227,189,107,${Math.max(0, c.life)})`;
+          ctx.beginPath();
+          ctx.ellipse(c.x, c.y, 3.2, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
       }
 
       function drawParticles() {
@@ -1072,72 +1220,131 @@
         ctx.ellipse(0, h - 1, 6.5 * s, 1.6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // legs (alternate via walk phase) with small feet
+        ctx.lineJoin = 'round';
+
+        // legs
         const legSwing = grounded ? Math.sin(walkPhase) * 2.2 * s : 0;
         ctx.fillStyle = RED_DARK;
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.1 * s;
         [-1, 1].forEach(side => {
           const off = side * legSwing;
           ctx.beginPath();
           ctx.roundRect(side * 2.6 * s - 1.8 * s + off, y - 4.5 * sy, 3.6 * s, 4.5 * sy, 1.6 * s);
           ctx.fill();
+          ctx.stroke();
         });
+        // shoes
         ctx.fillStyle = 'rgba(40,32,26,0.9)';
         [-1, 1].forEach(side => {
           const off = side * legSwing;
           ctx.beginPath();
           ctx.ellipse(side * 2.6 * s + off, y - 0.6 * sy, 2.3 * s, 1.5 * s, 0, 0, Math.PI * 2);
           ctx.fill();
+          ctx.stroke();
         });
 
         // arms
         ctx.fillStyle = RED_DARK;
         ctx.beginPath();
         ctx.ellipse(-7.2 * s, y - 9 * sy, 2.1 * s, 3 * sy, 0.25, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fill(); ctx.stroke();
         ctx.beginPath();
         ctx.ellipse(7.2 * s, y - 9.5 * sy, 2.1 * s, 3 * sy, -0.25, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fill(); ctx.stroke();
 
-        // body (rounded torso)
-        ctx.fillStyle = RED_DARK;
+        // body (rounded torso, with top-highlight / bottom-shadow shading)
+        const bodyGrad = ctx.createLinearGradient(0, y - 15 * sy, 0, y - 4.5 * sy);
+        bodyGrad.addColorStop(0, 'rgba(210,82,76,0.95)');
+        bodyGrad.addColorStop(1, 'rgba(140,42,40,0.95)');
+        ctx.fillStyle = bodyGrad;
         ctx.beginPath();
         ctx.roundRect(-6.5 * s, y - 15 * sy, 13 * s, 10.5 * sy, 4.5 * s);
         ctx.fill();
-        // overall straps (gold buttons — a small brand touch)
-        ctx.fillStyle = 'rgba(227,189,107,0.9)';
-        ctx.beginPath(); ctx.arc(-2.8 * s, y - 12 * sy, 1 * s, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(2.8 * s, y - 12 * sy, 1 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.stroke();
+        // overall straps (gold buttons)
+        ctx.fillStyle = 'rgba(227,189,107,0.95)';
+        ctx.lineWidth = 0.8 * s;
+        ctx.beginPath(); ctx.arc(-2.8 * s, y - 12 * sy, 1 * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(2.8 * s, y - 12 * sy, 1 * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-        // head
-        const headY = y - 20.5 * sy;
-        const headR = 6.6 * s;
-        ctx.fillStyle = SKIN;
+        // head (chibi-big, gentle top-light shading)
+        const headY = y - 21 * sy;
+        const headR = 7.3 * s;
+        const headGrad = ctx.createRadialGradient(-2 * s, headY - 2 * s, 1, 0, headY, headR * 1.3);
+        headGrad.addColorStop(0, 'rgba(238,201,140,0.98)');
+        headGrad.addColorStop(1, 'rgba(210,168,100,0.98)');
+        ctx.lineWidth = 1.2 * s;
+        ctx.fillStyle = headGrad;
         ctx.beginPath();
         ctx.arc(0, headY, headR, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
 
-        // cap (dome + brim, facing forward)
-        ctx.shadowColor = 'rgba(196,64,58,0.55)';
-        ctx.shadowBlur = 6 * s;
-        ctx.fillStyle = RED;
+        // blush
+        ctx.fillStyle = 'rgba(210,90,90,0.35)';
+        ctx.beginPath(); ctx.ellipse(-4.6 * s, headY + 2.4 * s, 1.6 * s, 1.1 * s, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4.6 * s, headY + 2.2 * s, 1.6 * s, 1.1 * s, 0, 0, Math.PI * 2); ctx.fill();
+
+        // cap (dome + brim) with highlight and thick outline
+        const capGrad = ctx.createLinearGradient(-headR, headY - headR, headR, headY);
+        capGrad.addColorStop(0, 'rgba(216,78,72,0.98)');
+        capGrad.addColorStop(1, 'rgba(168,50,46,0.98)');
+        ctx.shadowColor = 'rgba(196,64,58,0.5)';
+        ctx.shadowBlur = 5 * s;
+        ctx.fillStyle = capGrad;
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 1.2 * s;
         ctx.beginPath();
-        ctx.arc(0, headY - 0.5 * s, headR + 1.1 * s, Math.PI, 0);
+        ctx.arc(0, headY - 0.5 * s, headR + 1.2 * s, Math.PI, 0);
         ctx.fill();
+        ctx.stroke();
         ctx.beginPath();
-        ctx.roundRect(0.5 * s, headY - 1.5 * s, 6.5 * s, 3 * s, 1.5 * s);
+        ctx.roundRect(0.5 * s, headY - 1.6 * s, 7 * s, 3.2 * s, 1.5 * s);
         ctx.fill();
+        ctx.stroke();
         ctx.shadowBlur = 0;
+        // cap highlight streak + small emblem
+        ctx.strokeStyle = 'rgba(255,190,180,0.45)';
+        ctx.lineWidth = 1 * s;
+        ctx.beginPath();
+        ctx.arc(-1.5 * s, headY - 2.5 * s, headR * 0.6, Math.PI * 1.15, Math.PI * 1.55);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(227,189,107,0.95)';
+        ctx.strokeStyle = OUTLINE;
+        ctx.lineWidth = 0.7 * s;
+        ctx.beginPath();
+        ctx.arc(-2.5 * s, headY - 5.5 * s, 1.3 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
 
         // mustache
-        ctx.fillStyle = 'rgba(60,42,30,0.85)';
+        ctx.fillStyle = 'rgba(60,42,30,0.9)';
+        ctx.lineWidth = 0.9 * s;
         ctx.beginPath();
-        ctx.roundRect(-3.6 * s, headY + 1.8 * s, 7 * s, 1.9 * s, 1 * s);
+        ctx.roundRect(-3.6 * s, headY + 1.8 * s, 7 * s, 2 * s, 1 * s);
         ctx.fill();
+        ctx.stroke();
 
-        // eyes
-        ctx.fillStyle = 'rgba(12,10,16,0.9)';
-        ctx.beginPath(); ctx.arc(1.8 * s, headY - 0.8 * s, 1.15 * s, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(-2.4 * s, headY - 0.4 * s, 0.85 * s, 0, Math.PI * 2); ctx.fill();
+        // big cartoon eyes: white sclera + pupil + sparkle
+        [{ ex: 2.2, ey: -1, r: 1.85 }, { ex: -2.6, ey: -0.6, r: 1.5 }].forEach(eye => {
+          const ex = eye.ex * s, ey = headY + eye.ey * s, r = eye.r * s;
+          ctx.fillStyle = 'rgba(248,244,236,0.98)';
+          ctx.strokeStyle = OUTLINE;
+          ctx.lineWidth = 0.7 * s;
+          ctx.beginPath();
+          ctx.arc(ex, ey, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(30,22,18,0.95)';
+          ctx.beginPath();
+          ctx.arc(ex + 0.3 * s, ey + 0.4 * s, r * 0.55, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.beginPath();
+          ctx.arc(ex - 0.15 * s, ey - 0.05 * s, r * 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        });
 
         ctx.restore();
       }
@@ -1152,27 +1359,30 @@
 
         if (pipeState === 'none') {
           charX += dir * speed;
-          if (charX < MARGIN) { charX = MARGIN; dir = 1; }
-          if (charX > w - MARGIN) { charX = w - MARGIN; dir = -1; }
+          if (charX < MARGIN) { charX = MARGIN; dir = 1; dirCooldown = 40; }
+          if (charX > w - MARGIN) { charX = w - MARGIN; dir = -1; dirCooldown = 40; }
 
           if (grounded) walkPhase += speed * 0.9;
 
           const nearBlock = blocks.find(b => !b.used && Math.abs(charX - b.x) < 10);
 
+          if (dirCooldown > 0) dirCooldown--;
+
           if (grounded) {
-            if (Math.random() < 0.004) {
+            if (dirCooldown <= 0 && Math.random() < 0.012) {
               const target = blocks.find(b => !b.used);
-              if (target && Math.random() < 0.6) {
+              if (target && Math.random() < 0.7) {
                 dir = target.x > charX ? 1 : -1;
               } else {
                 dir *= -1;
               }
+              dirCooldown = 70 + Math.random() * 60;
             }
             if (Math.random() < 0.004) speed = 0.4 + Math.random() * 0.5;
 
-            const jumpChance = nearBlock ? 0.05 : 0.003;
-            if (Math.random() < jumpChance) {
-              jumpVel = -(3.4 + Math.random() * 1.8);
+            // jump only when it's purposeful — right under an active block
+            if (nearBlock && Math.random() < 0.06) {
+              jumpVel = -(4.0 + Math.random() * 1.8);
               grounded = false;
             }
             if (squash === 0 && Math.random() < 0.003) squash = 6;
@@ -1186,17 +1396,20 @@
 
             if (jumpVel < 0) {
               const feetY = h - 2 + yOffset;
-              const headTopY = feetY - 27 * CHAR_SCALE;
+              const headTopY = feetY - 28 * CHAR_SCALE;
               blocks.forEach(b => {
                 if (!b.used && Math.abs(charX - b.x) < 9 && headTopY <= b.y && headTopY > b.y - 10) {
                   b.used = true;
                   b.bounce = 6;
                   jumpVel = Math.max(jumpVel, 0.8);
                   if (b.type === 'coin') {
+                    poppingCoins.push({ x: b.x, y: b.y, vy: -1.8, life: 1 });
                     spawnParticles(b.x, b.y, 'rgba(227,189,107,ALPHA)', 8);
                   } else {
-                    mushroom.x = b.x;
                     mushroom.active = true;
+                    mushroom.x = b.x;
+                    mushroom.popFrom = b.y;
+                    mushroom.popT = 0;
                     spawnParticles(b.x, b.y, 'rgba(180,70,85,ALPHA)', 6);
                   }
                 }
@@ -1209,74 +1422,124 @@
             }
           }
 
-          blocks.forEach(b => { if (b.bounce > 0) b.bounce--; });
+          // blocks: bounce decay + burst-and-respawn
+          blocks.forEach(b => {
+            if (b.bounce > 0) b.bounce--;
+            if (b.used) {
+              b.burstTimer++;
+              if (b.burstTimer > 30) b.burst = true;
+            }
+          });
+          blocks = blocks.filter(b => !b.burst);
+          if (blocks.length < blockTarget) {
+            blockRespawnTimer--;
+            if (blockRespawnTimer <= 0) {
+              const nb = trySpawnBlock();
+              if (nb) { blocks.push(nb); blockRespawnTimer = 50 + Math.random() * 60; }
+              else blockRespawnTimer = 20;
+            }
+          }
+
+          // enemies: patrol, get stomped from above, burst + respawn
+          enemies.forEach(e => {
+            if (!e.squished) {
+              e.bob += 0.08;
+              e.x += e.dir * e.speed;
+              if (e.x < e.baseX - e.range) { e.x = e.baseX - e.range; e.dir = 1; }
+              if (e.x > e.baseX + e.range) { e.x = e.baseX + e.range; e.dir = -1; }
+
+              if (!grounded && jumpVel > 0 && Math.abs(charX - e.x) < 7) {
+                const feetY = h - 2 + yOffset;
+                if (feetY > h - 11 && feetY < h - 1) {
+                  e.squished = true;
+                  e.squishTimer = 0;
+                  jumpVel = -(2.2 + Math.random() * 0.8);
+                  grounded = false;
+                  spawnParticles(e.x, h - 6, 'rgba(140,60,90,ALPHA)', 6);
+                }
+              }
+            } else {
+              e.squishTimer++;
+              if (e.squishTimer > 26) e.burst = true;
+            }
+          });
+          enemies = enemies.filter(e => !e.burst);
+          if (enemies.length < enemyTarget) {
+            enemyRespawnTimer--;
+            if (enemyRespawnTimer <= 0) {
+              const ne = trySpawnEnemy();
+              if (ne) { enemies.push(ne); enemyRespawnTimer = 60 + Math.random() * 70; }
+              else enemyRespawnTimer = 25;
+            }
+          }
+
+          // popping coins: rise and fade
+          poppingCoins.forEach(c => {
+            c.y += c.vy;
+            c.vy += 0.05;
+            c.life -= 0.028;
+          });
+          poppingCoins = poppingCoins.filter(c => c.life > 0);
 
           if (growTimer > 0) growTimer--;
 
-          if (mushroom.active && Math.abs(charX - mushroom.x) < 8) {
-            mushroom.active = false;
-            growTimer = 220;
-            spawnParticles(mushroom.x, h - 8, 'rgba(180,70,85,ALPHA)', 8);
-          }
-          if (!mushroom.active) {
-            mushroomCooldown--;
-            if (mushroomCooldown <= 0) {
-              const x = MARGIN + Math.random() * (w - MARGIN * 2);
-              if (!pipeXs.some(px => Math.abs(px - x) < 18)) {
-                mushroom.x = x;
-                mushroom.active = true;
-              }
-              mushroomCooldown = 180 + Math.random() * 220;
-            }
-          }
-
-          if (coin.active) {
-            coin.spin += 0.25;
-            if (Math.abs(charX - coin.x) < 8) {
-              coin.active = false;
-              spawnParticles(coin.x, h - 10, 'rgba(227,189,107,ALPHA)', 6);
-            }
-          } else {
-            coinCooldown--;
-            if (coinCooldown <= 0) {
-              const x = MARGIN + Math.random() * (w - MARGIN * 2);
-              if (!pipeXs.some(px => Math.abs(px - x) < 18)) {
-                coin.x = x;
-                coin.active = true;
-                coin.spin = 0;
-              }
-              coinCooldown = 90 + Math.random() * 150;
+          // mushroom: pop out of block, then sit on ground until walked into
+          if (mushroom.active) {
+            if (mushroom.popT < 1) mushroom.popT = Math.min(1, mushroom.popT + 0.07);
+            if (Math.abs(charX - mushroom.x) < 8 && mushroom.popT >= 1) {
+              mushroom.active = false;
+              growTimer = 220;
+              spawnParticles(mushroom.x, h - 8, 'rgba(180,70,85,ALPHA)', 8);
             }
           }
 
           if (grounded) {
             pipeXs.forEach((px) => {
               if (Math.abs(charX - px) < 4 && Math.random() < 0.045) {
-                pipeState = 'entering';
+                pipeState = 'up';
                 pipeTimer = 0;
-                pipeDepth = 0;
                 charX = px;
                 canvas._targetPipe = randomOtherPipe(px);
               }
             });
           }
-        } else if (pipeState === 'entering') {
+        } else if (pipeState === 'up') {
           pipeTimer++;
-          pipeDepth = Math.min(1, pipeTimer / 9);
-          if (pipeTimer >= 9) { pipeState = 'hidden'; pipeTimer = 0; }
+          const t = Math.min(1, pipeTimer / 10);
+          yOffset = -PIPE_H * easeOut(t);
+          if (pipeTimer >= 10) { pipeState = 'up_hold'; pipeTimer = 0; yOffset = -PIPE_H; }
+        } else if (pipeState === 'up_hold') {
+          pipeTimer++;
+          if (pipeTimer >= 4) { pipeState = 'down'; pipeTimer = 0; }
+        } else if (pipeState === 'down') {
+          pipeTimer++;
+          const t = Math.min(1, pipeTimer / 10);
+          yOffset = -PIPE_H * (1 - t);
+          pipeDepth = t;
+          if (pipeTimer >= 10) { pipeState = 'hidden'; pipeTimer = 0; yOffset = 0; pipeDepth = 1; }
         } else if (pipeState === 'hidden') {
           pipeTimer++;
           if (pipeTimer >= 14) {
-            pipeState = 'exiting';
+            pipeState = 'rise';
             pipeTimer = 0;
             charX = canvas._targetPipe;
             dir = Math.random() < 0.5 ? -1 : 1;
             speed = 0.4 + Math.random() * 0.5;
           }
-        } else if (pipeState === 'exiting') {
+        } else if (pipeState === 'rise') {
           pipeTimer++;
-          pipeDepth = Math.max(0, 1 - pipeTimer / 9);
-          if (pipeTimer >= 9) { pipeState = 'none'; pipeDepth = 0; }
+          const t = Math.min(1, pipeTimer / 10);
+          yOffset = -PIPE_H * t;
+          pipeDepth = 1 - t;
+          if (pipeTimer >= 10) { pipeState = 'rise_hold'; pipeTimer = 0; pipeDepth = 0; yOffset = -PIPE_H; }
+        } else if (pipeState === 'rise_hold') {
+          pipeTimer++;
+          if (pipeTimer >= 4) { pipeState = 'off'; pipeTimer = 0; }
+        } else if (pipeState === 'off') {
+          pipeTimer++;
+          const t = Math.min(1, pipeTimer / 8);
+          yOffset = -PIPE_H * (1 - t);
+          if (pipeTimer >= 8) { pipeState = 'none'; pipeTimer = 0; yOffset = 0; pipeDepth = 0; }
         }
       }
 
@@ -1286,14 +1549,18 @@
         drawBricks();
         pipeXs.forEach(drawPipe);
         blocks.forEach(drawBlock);
-        if (mushroom.active) drawMushroom(mushroom.x);
-        if (coin.active) drawCoin(coin);
+        enemies.forEach(drawEnemy);
+        if (mushroom.active) {
+          const t = easeOut(mushroom.popT);
+          const my = mushroom.popFrom + ((h - 6) - mushroom.popFrom) * t;
+          drawMushroomAt(mushroom.x, my);
+        }
+        drawPoppingCoins();
         drawParticles();
 
         if (pipeState !== 'hidden') {
           const scale = CHAR_SCALE * (growTimer > 0 ? 1.3 : 1) * (1 - pipeDepth * 0.9);
-          const y = h - 2 + pipeDepth * 14;
-          if (pipeDepth < 0.95) drawChar(charX, y + yOffset, Math.max(0.15, scale));
+          if (pipeDepth < 0.95) drawChar(charX, h - 2 + yOffset, Math.max(0.15, scale));
         }
       }
 
